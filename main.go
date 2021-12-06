@@ -18,7 +18,7 @@ type RequestPayload struct {
 	Body    []byte
 
 	//ResponseCode if not provided, status 200 is used
-	ResponseCode *int
+	ResponseCode *uint
 }
 
 //HTTPService blueprint to the available functions
@@ -67,7 +67,7 @@ func (s *Service) MakeRequest(ctx context.Context, payload RequestPayload) ([]by
 
 	//return  based on user expected status code
 	if payload.ResponseCode != nil {
-		if res.StatusCode == *payload.ResponseCode {
+		if res.StatusCode == int(*payload.ResponseCode) {
 			return body, nil
 		}
 		return body, fmt.Errorf("{status: %v, message: %v}", res.Status, string(body))
