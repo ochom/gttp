@@ -16,9 +16,6 @@ type RequestPayload struct {
 	Method  string
 	Headers map[string]string
 	Body    []byte
-
-	//ResponseCode if not provided, status 200 is used
-	ResponseCode *uint
 }
 
 //HTTPService blueprint to the available functions
@@ -65,16 +62,8 @@ func (s *Service) MakeRequest(ctx context.Context, payload RequestPayload) ([]by
 		return nil, err
 	}
 
-	//return  based on user expected status code
-	if payload.ResponseCode != nil {
-		if res.StatusCode == int(*payload.ResponseCode) {
-			return body, nil
-		}
-		return body, fmt.Errorf("{status: %v, message: %v}", res.Status, string(body))
-	}
-
-	//default success status is 200 Ok
-	if res.StatusCode != http.StatusOK {
+	//default success status
+	if res.StatusCode > 210 {
 		return body, fmt.Errorf("{status: %v, message: %v}", res.Status, string(body))
 	}
 
