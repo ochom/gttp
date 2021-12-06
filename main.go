@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"time"
 )
@@ -32,6 +33,12 @@ type Service struct {
 func NewHTTPService(timeout time.Duration) HTTPService {
 	client := http.Client{
 		Timeout: time.Second * timeout,
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: time.Second * 30,
+			}).Dial,
+			TLSHandshakeTimeout: 5 * time.Second,
+		},
 	}
 	return &Service{
 		Client: client,
