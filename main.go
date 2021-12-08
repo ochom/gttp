@@ -24,7 +24,7 @@ type HTTPService interface {
 	MakeRequest(ctx context.Context, payload RequestPayload) ([]byte, error)
 
 	//post to posthere.io
-	PostHere(ctx context.Context, headers map[string]string, data string)
+	PostHere(ctx context.Context, headers map[string]string, data []byte)
 }
 
 //Service the controller struct for external access
@@ -81,14 +81,13 @@ func (s *Service) MakeRequest(ctx context.Context, payload RequestPayload) ([]by
 }
 
 //PostHere ...
-func (s *Service) PostHere(ctx context.Context, headers map[string]string, data string) {
-	body := []byte(data)
+func (s *Service) PostHere(ctx context.Context, headers map[string]string, data []byte) {
 
 	payload := RequestPayload{
 		URL:     "https://posthere.io/f8c4-4160-b821",
 		Method:  http.MethodPost,
 		Headers: headers,
-		Body:    body,
+		Body:    data,
 	}
 	_, err := s.MakeRequest(ctx, payload)
 	if err != nil {
