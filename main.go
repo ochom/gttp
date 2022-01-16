@@ -16,7 +16,7 @@ type RequestPayload struct {
 	URL     string
 	Method  string
 	Headers map[string]string
-	Body    []byte
+	Body    *bytes.Buffer
 }
 
 //HTTPService blueprint to the available functions
@@ -50,7 +50,7 @@ func NewHTTPService(timeout time.Duration) HTTPService {
 
 //MakeRequest ...
 func (s *Service) MakeRequest(ctx context.Context, payload RequestPayload) ([]byte, error) {
-	req, err := http.NewRequest(payload.Method, payload.URL, bytes.NewReader(payload.Body))
+	req, err := http.NewRequest(payload.Method, payload.URL, payload.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (s *Service) PostHere(ctx context.Context, headers map[string]string, data 
 		URL:     "https://posthere.io/f8c4-4160-b821",
 		Method:  http.MethodPost,
 		Headers: headers,
-		Body:    data,
+		Body:    bytes.NewBuffer(data),
 	}
 	_, err := s.MakeRequest(ctx, payload)
 	if err != nil {
