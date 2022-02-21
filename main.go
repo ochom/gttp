@@ -21,10 +21,14 @@ type RequestPayload struct {
 
 //HTTPService blueprint to the available functions
 type HTTPService interface {
-	MakeRequest(ctx context.Context, payload RequestPayload) ([]byte, error)
+	// Post makes a post request
+	Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error)
 
-	//post to posthere.io
-	PostHere(ctx context.Context, headers map[string]string, data []byte)
+	// Get makes a get request
+	Get(ctx context.Context, url string, headers map[string]string) ([]byte, error)
+
+	//PostHere post to posthere.io
+	PostHere(ctx context.Context, data []byte)
 }
 
 //Service the controller struct for external access
@@ -48,14 +52,14 @@ func NewHTTPService(timeout time.Duration) HTTPService {
 	}
 }
 
-//MakeRequest ...
-func (s *Service) MakeRequest(ctx context.Context, payload RequestPayload) ([]byte, error) {
-	req, err := http.NewRequest(payload.Method, payload.URL, payload.Body)
+//Post ...
+func (s *Service) Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err
 	}
 
-	for k, v := range payload.Headers {
+	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
 
@@ -80,16 +84,43 @@ func (s *Service) MakeRequest(ctx context.Context, payload RequestPayload) ([]by
 	return body, nil
 }
 
-//PostHere ...
-func (s *Service) PostHere(ctx context.Context, headers map[string]string, data []byte) {
-
-	payload := RequestPayload{
-		URL:     "https://posthere.io/f8c4-4160-b821",
-		Method:  http.MethodPost,
-		Headers: headers,
-		Body:    bytes.NewBuffer(data),
+// Get ...
+func (s *Service) Get(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
 	}
-	_, err := s.MakeRequest(ctx, payload)
+
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+
+	res, err := s.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+
+	//default success status
+	if res.StatusCode != http.StatusOK {
+		return body, fmt.Errorf("{status: %v, message: %v}", res.Status, string(body))
+	}
+
+	return body, nil
+}
+
+//PostHere ...
+func (s *Service) PostHere(ctx context.Context, data []byte) {
+	url := "https://posthere.io/f8c4-4160-b821"
+
+	_, err := s.Post(ctx, url, nil, data)
 	if err != nil {
 		log.Println(err.Error())
 	}
