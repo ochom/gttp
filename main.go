@@ -19,8 +19,8 @@ type RequestPayload struct {
 	Body    *bytes.Buffer
 }
 
-//HTTPService blueprint to the available functions
-type HTTPService interface {
+//Service blueprint to the available functions
+type Service interface {
 	// Post makes a post request
 	Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error)
 
@@ -31,29 +31,29 @@ type HTTPService interface {
 	PostHere(ctx context.Context, data []byte)
 }
 
-//Service the controller struct for external access
-type Service struct {
-	Client http.Client
+//impl the controller struct for external access
+type impl struct {
+	client http.Client
 }
 
-//NewHTTPService create a new instance of HTTPService
-func NewHTTPService(timeout time.Duration) HTTPService {
+//New create a new instance of HTTPService
+func New(timeout time.Duration) Service {
 	client := http.Client{
-		Timeout: time.Second * timeout,
+		Timeout: timeout,
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
-				Timeout: time.Second * 30,
+				Timeout: timeout,
 			}).Dial,
-			TLSHandshakeTimeout: 5 * time.Second,
+			TLSHandshakeTimeout: timeout,
 		},
 	}
-	return &Service{
-		Client: client,
+	return &impl{
+		client: client,
 	}
 }
 
 //Post ...
-func (s *Service) Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error) {
+func (s *impl) Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (s *Service) Post(ctx context.Context, url string, headers map[string]strin
 		req.Header.Add(k, v)
 	}
 
-	res, err := s.Client.Do(req)
+	res, err := s.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *Service) Post(ctx context.Context, url string, headers map[string]strin
 }
 
 // Get ...
-func (s *Service) Get(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
+func (s *impl) Get(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (s *Service) Get(ctx context.Context, url string, headers map[string]string
 		req.Header.Add(k, v)
 	}
 
-	res, err := s.Client.Do(req)
+	res, err := s.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (s *Service) Get(ctx context.Context, url string, headers map[string]string
 }
 
 //PostHere ...
-func (s *Service) PostHere(ctx context.Context, data []byte) {
+func (s *impl) PostHere(ctx context.Context, data []byte) {
 	url := "https://posthere.io/f8c4-4160-b821"
 
 	_, err := s.Post(ctx, url, nil, data)
