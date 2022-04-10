@@ -3,7 +3,6 @@ package gohttp
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -21,11 +20,11 @@ type RequestPayload struct {
 
 //Service blueprint to the available functions
 type Service interface {
-	// Post makes a post request
-	Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error)
+	// Post makes a post request returns status code, response body and any errors
+	Post(ctx context.Context, url string, headers map[string]string, payload []byte) (int, []byte, error)
 
-	// Get makes a get request
-	Get(ctx context.Context, url string, headers map[string]string) ([]byte, error)
+	// Get makes a get request returns status code, response body and any errors
+	Get(ctx context.Context, url string, headers map[string]string) (int, []byte, error)
 
 	//PostHere post to posthere.io
 	PostHere(ctx context.Context, data []byte)
@@ -53,10 +52,12 @@ func New(timeout time.Duration) Service {
 }
 
 //Post ...
-func (s *impl) Post(ctx context.Context, url string, headers map[string]string, payload []byte) ([]byte, error) {
+func (s *impl) Post(ctx context.Context, url string, headers map[string]string, payload []byte) (status int, body []byte, err error) {
+	status = 0
+	body = []byte{}
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payload))
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	for k, v := range headers {
@@ -65,30 +66,28 @@ func (s *impl) Post(ctx context.Context, url string, headers map[string]string, 
 
 	res, err := s.client.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err = ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Println(err.Error())
-		return nil, err
+		return
 	}
 
-	//default success status
-	if res.StatusCode > 210 {
-		return body, fmt.Errorf("{status: %v, message: %v}", res.Status, string(body))
-	}
+	status = res.StatusCode
 
-	return body, nil
+	return
 }
 
 // Get ...
-func (s *impl) Get(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
+func (s *impl) Get(ctx context.Context, url string, headers map[string]string) (status int, body []byte, err error) {
+	status = 0
+	body = []byte{}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	for k, v := range headers {
@@ -97,30 +96,26 @@ func (s *impl) Get(ctx context.Context, url string, headers map[string]string) (
 
 	res, err := s.client.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err = ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Println(err.Error())
-		return nil, err
+		return
 	}
 
-	//default success status
-	if res.StatusCode != http.StatusOK {
-		return body, fmt.Errorf("{status: %v, message: %v}", res.Status, string(body))
-	}
+	status = res.StatusCode
 
-	return body, nil
+	return
 }
 
 //PostHere ...
 func (s *impl) PostHere(ctx context.Context, data []byte) {
 	url := "https://posthere.io/f8c4-4160-b821"
 
-	_, err := s.Post(ctx, url, nil, data)
+	_, _, err := s.Post(ctx, url, nil, data)
 	if err != nil {
 		log.Println(err.Error())
 	}
