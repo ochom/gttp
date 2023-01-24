@@ -1,6 +1,6 @@
-module github.com/ochom/go-http
+module github.com/ochom/gttp
 
-go 1.17
+go 1.18
 
 require github.com/stretchr/testify v1.7.0
 

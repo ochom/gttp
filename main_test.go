@@ -1,26 +1,50 @@
 package gohttp
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestService_Get(t *testing.T) {
-	s := New(time.Second * 30)
-	status, res, err := s.Get(context.Background(), "https://google.com", nil)
+	res, status, err := NewRequest("https://google.com", nil, nil).Get()
 	assert.Equal(t, nil, err)
+	assert.Equal(t, 200, status)
 	assert.NotEqual(t, nil, res)
-	assert.Equal(t, 200, status, "response status should be 200")
 }
 
 func TestService_Post(t *testing.T) {
-	s := New(time.Second * 30)
 	url := "https://posthere.io/f8c4-4160-b821"
-	status, res, err := s.Post(context.Background(), url, map[string]string{"Authorization": "Basic hello world"}, []byte(`{"hello":"world"}`))
+	headers := map[string]string{"Authorization": "Basic hello world"}
+	body := []byte(`{"hello":"world"}`)
+	res, status, err := NewRequest(url, headers, body).Post()
 	assert.Equal(t, nil, err)
+	assert.Equal(t, 200, status)
 	assert.NotEqual(t, nil, res)
-	assert.Equal(t, 200, status, "response status should be 200")
+}
+
+func TestWithTimeout(t *testing.T) {
+	url := "https://posthere.io/f8c4-4160-b821"
+	headers := map[string]string{"Authorization": "Basic hello world"}
+	body := []byte(`{"hello":"world"}`)
+	res, status, err := NewRequestWithTimeout(url, headers, body, 5).Post()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 200, status)
+	assert.NotEqual(t, nil, res)
+}
+
+func TestNew(t *testing.T) {
+	url := "https://posthere.io/f8c4-4160-b821"
+	headers := map[string]string{"Authorization": "Basic hello world"}
+	body := []byte(`{"hello":"world"}`)
+
+	req := New()
+	req.SetBody(body)
+	req.SetHeaders(headers)
+	req.SetURL(url)
+
+	res, status, err := req.Post()
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 200, status)
+	assert.NotEqual(t, nil, res)
 }

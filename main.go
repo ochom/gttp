@@ -2,121 +2,107 @@ package gohttp
 
 import (
 	"bytes"
-	"context"
-	"io/ioutil"
-	"log"
+	"io"
 	"net"
 	"net/http"
 	"time"
 )
 
-//RequestPayload is the format required to make request
-type RequestPayload struct {
-	URL     string
-	Method  string
-	Headers map[string]string
-	Body    *bytes.Buffer
+// Request is the format required to make request
+type Request struct {
+	url     string
+	headers map[string]string
+	body    *bytes.Buffer
+	timeout time.Duration
 }
 
-//Service blueprint to the available functions
-type Service interface {
-	// Post makes a post request returns status code, response body and any errors
-	Post(ctx context.Context, url string, headers map[string]string, payload []byte) (int, []byte, error)
-
-	// Get makes a get request returns status code, response body and any errors
-	Get(ctx context.Context, url string, headers map[string]string) (int, []byte, error)
-
-	//PostHere post to posthere.io
-	PostHere(ctx context.Context, data []byte)
+// New creates a new request with no configuration
+func New() *Request {
+	return &Request{}
 }
 
-//impl the controller struct for external access
-type impl struct {
-	client http.Client
+// SetBody sets the body
+func (r *Request) SetBody(body []byte) {
+	r.body = bytes.NewBuffer(body)
 }
 
-//New create a new instance of HTTPService
-func New(timeout time.Duration) Service {
+// SetHeaders sets the headers
+func (r *Request) SetHeaders(headers map[string]string) {
+	r.headers = headers
+}
+
+// SetURL sets the url
+func (r *Request) SetURL(url string) {
+	r.url = url
+}
+
+// SetTimeout sets the timeout
+func (r *Request) SetTimeout(seconds int) {
+	r.timeout = time.Duration(seconds) * time.Second
+}
+
+// NewRequest creates a new request
+func NewRequest(url string, headers map[string]string, body []byte) *Request {
+	timeout := 10 * time.Second
+	return &Request{url, headers, bytes.NewBuffer(body), timeout}
+}
+
+// NewRequestWithTimeout creates a new request with timeout in seconds
+func NewRequestWithTimeout(url string, headers map[string]string, body []byte, seconds int) *Request {
+	to := time.Duration(seconds) * time.Second
+	return &Request{url, headers, bytes.NewBuffer(body), to}
+}
+
+// Send sends the request
+func (r *Request) Send(method string) (body []byte, status int, err error) {
+	timeout := 10 * time.Second
+	if r.timeout == 0 {
+		r.timeout = timeout
+	}
 	client := http.Client{
-		Timeout: timeout,
+		Timeout: r.timeout,
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
-				Timeout: timeout,
+				Timeout: r.timeout,
 			}).Dial,
-			TLSHandshakeTimeout: timeout,
+			TLSHandshakeTimeout: r.timeout,
 		},
 	}
-	return &impl{
-		client: client,
-	}
-}
 
-//Post ...
-func (s *impl) Post(ctx context.Context, url string, headers map[string]string, payload []byte) (status int, body []byte, err error) {
-	status = 0
-	body = []byte{}
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payload))
+	req, err := http.NewRequest(method, r.url, r.body)
 	if err != nil {
 		return
 	}
 
-	for k, v := range headers {
+	for k, v := range r.headers {
 		req.Header.Add(k, v)
 	}
 
-	res, err := s.client.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return
 	}
 
 	defer res.Body.Close()
 
-	body, err = ioutil.ReadAll(res.Body)
+	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		return
 	}
 
 	status = res.StatusCode
 
+	return
+}
+
+// Post ...
+func (r *Request) Post() (body []byte, status int, err error) {
+	body, status, err = r.Send(http.MethodPost)
 	return
 }
 
 // Get ...
-func (s *impl) Get(ctx context.Context, url string, headers map[string]string) (status int, body []byte, err error) {
-	status = 0
-	body = []byte{}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return
-	}
-
-	for k, v := range headers {
-		req.Header.Add(k, v)
-	}
-
-	res, err := s.client.Do(req)
-	if err != nil {
-		return
-	}
-
-	defer res.Body.Close()
-
-	body, err = ioutil.ReadAll(res.Body)
-	if err != nil {
-		return
-	}
-
-	status = res.StatusCode
-
+func (r *Request) Get() (body []byte, status int, err error) {
+	body, status, err = r.Send(http.MethodGet)
 	return
-}
-
-//PostHere ...
-func (s *impl) PostHere(ctx context.Context, data []byte) {
-	url := "https://posthere.io/f8c4-4160-b821"
-
-	_, _, err := s.Post(ctx, url, nil, data)
-	if err != nil {
-		log.Println(err.Error())
-	}
 }
