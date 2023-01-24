@@ -106,3 +106,15 @@ func (r *Request) Get() (body []byte, status int, err error) {
 	body, status, err = r.Send(http.MethodGet)
 	return
 }
+
+// Put ...
+func (r *Request) Put() (body []byte, status int, err error) {
+	body, status, err = r.Send(http.MethodPut)
+	return
+}
+
+// Patch ...
+func (r *Request) Patch() (body []byte, status int, err error) {
+	body, status, err = r.Send(http.MethodPatch)
+	return
+}
