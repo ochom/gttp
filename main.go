@@ -1,4 +1,4 @@
-package gohttp
+package gttp
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Request is the format required to make request
+// Request base struct for request
 type Request struct {
 	url     string
 	headers map[string]string
